@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Acre Deal — Campaign Planner v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F4F6;--surface:#FFF;--surface2:#F0F1F4;--surface3:#E5E7EB;--border:#D1D5DB;--text:#1F2937;--text2:#6B7280;--text3:#9CA3AF;--accent:#4F6BED;--realtor:#2563EB;--realtor-bg:#EFF4FF;--buyer:#059669;--buyer-bg:#ECFDF5;--neighbor:#D97706;--neighbor-bg:#FFFBEB;--investor:#7C3AED;--investor-bg:#F5F3FF;--pricedrop:#DC2626;--pricedrop-bg:#FEF2F2;--critical:#DC2626;--success:#059669;--call-badge:#DB2777;--radius:8px;--radius-sm:5px;--shadow:0 2px 8px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh}
+.app{display:grid;grid-template-columns:360px 1fr;grid-template-rows:auto 1fr;height:100vh}
+.header{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:20px;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.header h1{font-size:18px;font-weight:700;letter-spacing:-.3px;white-space:nowrap}.header h1 span{color:var(--accent)}
+.legend{display:flex;gap:12px;align-items:center}.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}.legend-dot{width:10px;height:10px;border-radius:3px}
+.header-stats{display:flex;gap:12px;margin-left:auto;flex-wrap:wrap}
+.stat-pill{background:var(--surface2);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;display:flex;align-items:center;gap:5px}
+.stat-pill .num{font-family:'Space Mono',monospace;font-weight:700;color:var(--accent)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:5}
+.sidebar-tab{flex:1;padding:10px 4px;text-align:center;font-size:9px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:.15s;letter-spacing:.3px;text-transform:uppercase}
+.sidebar-tab:hover{color:var(--text2);background:var(--surface2)}
+.sidebar-tab.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(79,107,237,.04)}
+.sidebar-tab .tab-icon{display:block;font-size:15px;margin-bottom:2px}
+.sidebar-content{flex:1;padding:8px;overflow-y:auto}.sidebar-content.hidden{display:none}
+.prop-card{padding:10px;border-radius:var(--radius);font-size:11px;position:relative;margin-bottom:6px;background:var(--surface);border:1px solid var(--border);transition:box-shadow .15s;cursor:pointer}
+.prop-card:hover{box-shadow:var(--shadow);border-color:var(--accent)}
+.prop-card-top{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px}
+.prop-card-address{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.prop-card-badges{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.prop-card-meta{display:flex;gap:6px;font-size:10px;color:var(--text2);flex-wrap:wrap;margin-bottom:6px}
+.prop-card-meta span{display:flex;align-items:center;gap:2px}
+.prop-card-campaigns{display:flex;gap:4px;flex-wrap:wrap}
+.hl-value{font-family:'Space Mono',monospace;font-weight:700;font-size:12px;padding:2px 10px;border-radius:6px;display:inline-block;margin-bottom:5px}
+.hl-profit{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
+.hl-expire{background:#FEF2F2;color:#DC2626;border:1px solid #FECACA}
+.hl-lastcamp{background:#FEF3C7;color:#92400E;border:1px solid #FDE68A}
+.campaign-chip{font-size:10px;font-weight:600;padding:4px 10px;border-radius:12px;cursor:grab;transition:.15s;border:1px solid;display:inline-flex;align-items:center;gap:3px;user-select:none}
+.campaign-chip:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.campaign-chip:active{cursor:grabbing;opacity:.7}
+.campaign-chip.dragging{opacity:.25}
+.campaign-chip.realtor{background:var(--realtor-bg);color:var(--realtor);border-color:#BFDBFE}
+.campaign-chip.buyer{background:var(--buyer-bg);color:var(--buyer);border-color:#A7F3D0}
+.campaign-chip.neighbor{background:var(--neighbor-bg);color:var(--neighbor);border-color:#FDE68A}
+.campaign-chip.investor{background:var(--investor-bg);color:var(--investor);border-color:#DDD6FE}
+.campaign-chip.pricedrop{background:var(--pricedrop-bg);color:var(--pricedrop);border-color:#FECACA}
+.chip-call{font-size:7px;background:var(--call-badge);color:#fff;padding:1px 4px;border-radius:4px}
+.badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;font-family:'Space Mono',monospace}
+.badge-jose{background:#DBEAFE;color:#1E40AF}.badge-gab{background:#FDE68A;color:#92400E}
+.pod-filter{cursor:pointer;padding:3px 10px;font-size:10px;transition:.15s;border:2px solid transparent}
+.pod-filter:hover{transform:scale(1.1)}
+.pod-filter.active{border-color:#1F2937;box-shadow:0 0 0 2px rgba(79,107,237,.3)}
+.badge-tah{background:#DBEAFE;color:#1E40AF;font-size:8px}
+.badge-exp{font-size:8px;padding:1px 5px;border-radius:8px;background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+.badge-exp.urgent{background:#FEE2E2;color:#DC2626;border-color:#FECACA}
+
+/* AI Recommendation Cards */
+.ai-card{padding:10px 12px;border-radius:var(--radius);margin-bottom:6px;background:var(--surface);border:1px solid var(--border);transition:box-shadow .15s;position:relative}
+.ai-card:hover{box-shadow:var(--shadow)}
+.ai-card-rank{position:absolute;top:8px;left:10px;font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--surface3);line-height:1}
+.ai-card-top{display:flex;align-items:center;gap:6px;margin-left:30px;margin-bottom:4px}
+.ai-card-address{font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;cursor:pointer}
+.ai-card-address:hover{color:var(--accent);text-decoration:underline}
+.ai-card-score{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,107,237,.08);padding:2px 8px;border-radius:10px}
+.ai-card-reason{font-size:10px;color:var(--text2);margin-left:30px;margin-bottom:6px;line-height:1.4}
+.ai-card-chip-row{margin-left:30px;display:flex;gap:4px;align-items:center}
+.ai-card-meta{display:flex;gap:6px;font-size:9px;color:var(--text3);margin-left:30px;margin-top:4px}
+.calendar-wrap{overflow:auto;padding:16px}
+.calendar-controls{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.cal-nav{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:32px;height:32px;border-radius:var(--radius-sm);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.cal-nav:hover{background:var(--surface3)}
+.cal-month{font-size:16px;font-weight:600;min-width:180px;text-align:center}
+.calendar{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-header-cell{background:var(--surface);padding:10px;text-align:center;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.cal-day{background:var(--surface);min-height:140px;padding:8px;display:flex;flex-direction:column;transition:background .15s;position:relative}
+.cal-day.today{background:rgba(79,107,237,.05)}.cal-day.past{background:#F9FAFB}
+.cal-day.past>.cal-day-header{opacity:.4}
+.cal-day.past .cal-day-cards .sched-card{pointer-events:none;opacity:.3;cursor:default}
+
+/* Reschedule Section */
+.resched-section{display:none}
+.resched-section.has-items{display:block;background:#FEF2F2;border-bottom:2px solid #FECACA;padding:10px 12px}
+.resched-title{font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.resched-title .resched-count{background:#DC2626;color:#fff;font-size:10px;padding:1px 7px;border-radius:10px;font-family:'Space Mono',monospace}
+.resched-card{padding:8px 10px;border-radius:var(--radius);margin-bottom:5px;background:#fff;border:1px solid #FECACA;border-left:3px solid #DC2626;cursor:grab;user-select:none;transition:box-shadow .15s}
+.resched-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.resched-card:active{cursor:grabbing;opacity:.7}
+.resched-card-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.resched-card-type{font-weight:700;font-size:11px;color:#DC2626}
+.resched-card-addr{font-size:11px;font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resched-card-date{font-size:10px;color:#DC2626;font-weight:600;background:#FEE2E2;padding:2px 8px;border-radius:6px}
+.cal-day.drop-target{background:rgba(79,107,237,.06);outline:2px dashed var(--accent);outline-offset:-2px}
+.cal-day.outside{background:#F9FAFB;opacity:.3;pointer-events:none}
+.cal-day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cal-day-num{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text2)}
+.cal-day.today .cal-day-num{color:var(--accent)}
+.cal-day-stats{display:flex;align-items:center;gap:5px}
+.cal-day-profit{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:#059669}
+.cal-day-pod{font-family:'Space Mono',monospace;font-size:9px;font-weight:600;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:6px}
+.cal-day-count{font-size:10px;font-weight:700;font-family:'Space Mono',monospace;padding:2px 6px;border-radius:8px}
+.cal-day-count.ok{background:rgba(16,185,129,.15);color:var(--success)}.cal-day-count.low{background:rgba(239,68,68,.15);color:var(--critical)}.cal-day-count.zero{background:var(--surface2);color:var(--text3)}
+.cal-day-cards{flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto;min-height:40px}
+.sched-card{padding:5px 8px;border-radius:var(--radius-sm);font-size:10px;cursor:grab;border-left:3px solid;position:relative;user-select:none;display:flex;align-items:center;gap:5px}
+.sched-card:hover{box-shadow:var(--shadow)}
+.sched-card.realtor{background:var(--realtor-bg);border-left-color:var(--realtor)}.sched-card.buyer{background:var(--buyer-bg);border-left-color:var(--buyer)}
+.sched-card.neighbor{background:var(--neighbor-bg);border-left-color:var(--neighbor)}.sched-card.investor{background:var(--investor-bg);border-left-color:var(--investor)}
+.sched-card.pricedrop{background:var(--pricedrop-bg);border-left-color:var(--pricedrop)}
+.sched-type{font-weight:700;font-size:10px}.sched-addr{font-size:9px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;max-width:90px}
+.sched-pod{font-size:8px;font-weight:700;padding:1px 4px;border-radius:6px}
+.sched-pod.jose{background:#DBEAFE;color:#1E40AF}.sched-pod.gab{background:#FDE68A;color:#92400E}
+.remove-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;display:none;padding:0 2px;line-height:1;margin-left:auto}
+.sched-card:hover .remove-btn{display:block;color:var(--critical)}
+.empty-day{font-size:10px;color:var(--text3);text-align:center;padding:20px 4px;font-style:italic}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:0;max-width:580px;width:94%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border)}.modal-header-top{display:flex;justify-content:space-between;align-items:flex-start}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:2px}.modal-subtitle{font-size:12px;color:var(--text2)}
+.modal-close-x{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0 4px;line-height:1}.modal-close-x:hover{color:var(--text)}
+.modal-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.modal-tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px}
+.modal-tag.t-realtor{background:#DBEAFE;color:#1D4ED8}.modal-tag.t-buyer{background:#D1FAE5;color:#047857}
+.modal-tag.t-neighbor{background:#FEF3C7;color:#B45309}.modal-tag.t-investor{background:#EDE9FE;color:#6D28D9}
+.modal-tag.t-call{background:#FCE7F3;color:#BE185D}.modal-tag.t-text{background:var(--surface2);color:var(--text2)}
+.modal-tag.t-round{background:var(--surface2);color:var(--text2)}.modal-tag.t-owned{background:#DBEAFE;color:#1E40AF}
+.modal-tag.t-exp{background:#F3F4F6;color:#6B7280}.modal-tag.t-exp-urgent{background:#FEE2E2;color:#DC2626}
+.modal-body{padding:16px 24px 20px}.modal-section{margin-bottom:18px}
+.modal-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--surface2)}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px}
+.modal-field{display:flex;justify-content:space-between;padding:5px 0;font-size:12px}.modal-field .fl{color:var(--text2)}.modal-field .fv{font-weight:600;text-align:right}
+.modal-field .fv.positive{color:#059669}.modal-field .fv.negative{color:#DC2626}.modal-field .fv.highlight{color:var(--accent)}
+.modal-reasoning{background:#F0F4FF;border:1px solid #DBEAFE;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.6;color:#1E3A5F}
+.modal-reasoning strong{font-weight:700}.modal-reasoning .reason-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);margin-bottom:6px;display:block}
+.modal-history-table{width:100%;font-size:11px;border-collapse:collapse}
+.modal-history-table th{text-align:left;padding:6px 8px;background:var(--surface2);color:var(--text2);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.modal-history-table td{padding:5px 8px;border-bottom:1px solid var(--surface2)}.modal-history-table tr:last-child td{border-bottom:none}
+.modal-history-empty{font-size:12px;color:var(--text3);font-style:italic;padding:12px 0}
+.history-scroll{max-height:160px;overflow-y:auto;border:1px solid var(--surface2);border-radius:6px}
+.modal-footer{padding:12px 24px 20px;display:flex;justify-content:flex-end}
+.modal-close-btn{background:var(--accent);color:#fff;border:none;padding:8px 28px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px}.modal-close-btn:hover{opacity:.9}
+.modal-notes{width:100%;min-height:70px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--surface2);resize:vertical;line-height:1.5;outline:none}
+.modal-notes:focus{border-color:var(--accent)}.modal-notes::placeholder{color:var(--text3)}
+.sched-row{padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.sched-row-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.sched-row-date{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);background:rgba(79,107,237,.08);padding:3px 10px;border-radius:6px}
+.sched-row-type{font-size:11px;font-weight:700}
+.sched-row-field{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sched-row-label{font-size:11px;font-weight:600;color:var(--text2);min-width:90px}
+.sched-row select{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text);background:var(--surface);outline:none}
+.sched-row select:focus{border-color:var(--accent)}
+.sched-row textarea{width:100%;min-height:50px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--text);background:var(--surface);resize:vertical;outline:none;line-height:1.4}
+.sched-row textarea:focus{border-color:var(--accent)}
+.sched-row textarea::placeholder{color:var(--text3)}
+.no-sched{font-size:12px;color:var(--text3);font-style:italic;padding:12px 0}
+
+.upload-panel{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center}
+.upload-panel.hidden{display:none}
+.upload-box{background:var(--surface);border:2px dashed var(--border);border-radius:16px;padding:48px;text-align:center;max-width:500px;width:90%}
+.upload-box h2{font-size:22px;font-weight:700;margin-bottom:8px}.upload-box h2 span{color:var(--accent)}
+.upload-box p{font-size:14px;color:var(--text2);margin-bottom:24px}
+.upload-box label{display:block;margin-bottom:12px;text-align:left;font-size:13px;font-weight:600;color:var(--text)}
+.upload-box input[type=file]{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;margin-bottom:16px;background:var(--surface2)}
+.upload-box button{background:var(--accent);color:#fff;border:none;padding:12px 32px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;width:100%}
+.upload-box button:hover{opacity:.9}.upload-box button:disabled{opacity:.5;cursor:not-allowed}
+.upload-status{margin-top:16px;font-size:13px;color:var(--text2);min-height:20px}
+.upload-status.error{color:var(--critical)}.upload-status.success{color:var(--success)}
+.upload-mini{display:flex;align-items:center;gap:8px}
+.upload-mini label{font-size:11px;padding:5px 12px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-weight:600;color:var(--text2)}
+.upload-mini label:hover{border-color:var(--accent);color:var(--text)}
+.upload-mini input{display:none}
+.save-indicator{font-size:10px;color:var(--success);font-weight:600;opacity:0;transition:opacity .3s}
+.save-indicator.show{opacity:1}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+
+<div class="upload-panel" id="upload-panel">
+  <div class="upload-box">
+    <h2>The Acre Deal — <span>Campaign Planner</span></h2>
+    <p>Upload your CSV files to load properties and campaign history</p>
+    <label>Property Performance Report (.csv)</label>
+    <input type="file" id="file-pipeline" accept=".csv">
+    <label>Campaign History (.csv)</label>
+    <input type="file" id="file-history" accept=".csv">
+    <button id="process-btn" onclick="processUpload()">Load Campaign Planner</button>
+    <div class="upload-status" id="upload-status"></div>
+  </div>
+</div>
+<div class="app" id="main-app" style="display:none">
+  <div class="header">
+    <h1>The Acre Deal — <span>Campaign Planner</span></h1>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--realtor)"></div>Realtor</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--buyer)"></div>Buyer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--neighbor)"></div>Neighbor</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--investor)"></div>Investor</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--pricedrop)"></div>Price Drop</div>
+      <div class="legend-item"><span style="background:var(--call-badge);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700">CALL</span>Call</div>
+      <div class="legend-item" style="margin-left:6px;padding-left:6px;border-left:1px solid var(--border)"><span class="badge badge-jose pod-filter" data-pod="Jose" onclick="togglePodFilter('Jose')">Jose</span></div>
+      <div class="legend-item"><span class="badge badge-gab pod-filter" data-pod="Gabriel" onclick="togglePodFilter('Gabriel')">Gab</span></div>
+    </div>
+    <div class="upload-mini">
+      <label for="refresh-csv">📂 Refresh CSVs</label>
+      <input type="file" id="refresh-csv" accept=".csv" multiple onchange="handleRefreshUpload(this.files)">
+      <span class="save-indicator" id="save-indicator">✓ Saved</span>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill">Properties <span class="num" id="stat-props">0</span></div>
+      <div class="stat-pill">Scheduled <span class="num" id="stat-sched">0</span></div>
+      <div class="stat-pill">Unplanned <span class="num" id="stat-unplan">0</span></div>
+      <div class="stat-pill" style="border:1px solid #D1FAE5">Profit Chasing <span class="num" id="stat-profit" style="color:#059669">$0</span></div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div id="resched-section" class="resched-section"></div>
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" data-tab="all"><span class="tab-icon">📋</span>All</div>
+      <div class="sidebar-tab" data-tab="profit"><span class="tab-icon">💰</span>Spread</div>
+      <div class="sidebar-tab" data-tab="dom"><span class="tab-icon">⏳</span>Expire</div>
+      <div class="sidebar-tab" data-tab="lastcamp"><span class="tab-icon">📨</span>Last Camp</div>
+      <div class="sidebar-tab" data-tab="owned"><span class="tab-icon">🏠</span>Owned</div>
+      <div class="sidebar-tab" data-tab="ai"><span class="tab-icon">🤖</span>AI</div>
+      <div class="sidebar-tab" data-tab="new"><span class="tab-icon">🆕</span>New</div>
+    </div>
+    <div class="sidebar-content" id="sb-all"></div>
+    <div class="sidebar-content hidden" id="sb-profit"></div>
+    <div class="sidebar-content hidden" id="sb-dom"></div>
+    <div class="sidebar-content hidden" id="sb-lastcamp"></div>
+    <div class="sidebar-content hidden" id="sb-owned"></div>
+    <div class="sidebar-content hidden" id="sb-ai"></div>
+    <div class="sidebar-content hidden" id="sb-new"></div>
+  </div>
+  <div class="calendar-wrap">
+    <div class="calendar-controls">
+      <button class="cal-nav" id="prev-month">‹</button>
+      <div class="cal-month" id="cal-month-label"></div>
+      <button class="cal-nav" id="next-month">›</button>
+    </div>
+    <div class="calendar" id="calendar"></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal"><div class="modal" id="modal-content"></div></div>
+
+<script>
+const PROPS=[{"id":"L - 0855","address":"Blue Stem Dr,Elkhart,IL,62634","state":"Illinois","county":"Logan County","profit":-4553,"dom":839,"expDays":0,"pod":"Jose","acreage":"0.52","neighborOk":true,"lastCampaign":"2026-03-09","price":"5100.00","mls":"LC - 3068","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside city - Inside SubD / No HOA","zillowSaves":"9","ddStatus":"Prem DD Clear","totalLeads":"12","totalQualified":"0","salesHub":"SH-00201","priceDrops":"6","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/22/2026","members":"217"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/30/2026","members":"282"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/4/2026","members":"742"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/7/2026","members":"957"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/5/2026","members":"188"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"189"}],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1211","address":"460 Beck Ln,Waverly,TN,37185","state":"Tennessee","county":"Humphreys","profit":45903,"dom":327,"expDays":120,"pod":"Jose","acreage":"17.59","neighborOk":true,"lastCampaign":null,"price":"99900.00","mls":"LC - 7618","listedMLS":"No","listedFB":"Yes","listingStatus":"Needs Update","propertyType":"Outside City - Large Unrestricted (10>)","zillowSaves":"","ddStatus":"In Process","totalLeads":"14","totalQualified":"1","salesHub":"SH-00345","priceDrops":"0","history":[],"isOwned":false,"transactionStage":"Due Diligence"},{"id":"L - 1259","address":"12020 Trailwood Dr,Whitney,TX,76692","state":"Texas","county":"Hill","profit":3499,"dom":272,"expDays":0,"pod":"Jose","acreage":"0.54","neighborOk":true,"lastCampaign":"2026-03-09","price":"6700.00","mls":"LC - 8221","listedMLS":"Yes","listedFB":"Yes","listingStatus":"UC w/o EMD","propertyType":"Outside City - Inside SubD / HOA","zillowSaves":"13","ddStatus":"Prem DD Clear","totalLeads":"23","totalQualified":"0","salesHub":"SH-00394","priceDrops":"6","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/22/2026","members":"582"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/4/2026","members":"740"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/4/2026","members":"866"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"537"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"896"}],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1306","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":-3000,"dom":230,"expDays":0,"pod":"Gabriel","acreage":"0.80","neighborOk":true,"lastCampaign":"2026-03-17","price":"","mls":"LC - 8549","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"29","totalQualified":"1","salesHub":"SH-00430","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/23/2026","members":"354"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/22/2026","members":"853"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"2/12/2026","members":"647"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/3/2026","members":"400"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/7/2026","members":"647"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"2/27/2026","members":"646"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/5/2026","members":"252"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/17/2026","members":"646"}],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1314","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":9885,"dom":223,"expDays":0,"pod":"Gabriel","acreage":"0.64","neighborOk":false,"lastCampaign":"2026-03-31","price":"14900.00","mls":"LC - 8622","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"5","totalQualified":"0","salesHub":"SH-00438","priceDrops":"2","history":[{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/31/2026","members":"898"}],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1355","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":1040,"dom":179,"expDays":0,"pod":"Gabriel","acreage":"0.33","neighborOk":false,"lastCampaign":null,"price":"5000.00","mls":"LC - 8801","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"0","totalQualified":"0","salesHub":"SH-00463","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1358","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":1065,"dom":173,"expDays":0,"pod":"Gabriel","acreage":"0.16","neighborOk":false,"lastCampaign":null,"price":"5000.00","mls":"LC - 8823","listedMLS":"No","listedFB":"No","listingStatus":"Needs Update","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"1","totalQualified":"0","salesHub":"SH-00466","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1360","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":1065,"dom":159,"expDays":0,"pod":"Gabriel","acreage":"0.31","neighborOk":false,"lastCampaign":null,"price":"5000.00","mls":"LC - 8847","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"2","totalQualified":"0","salesHub":"SH-00468","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1368","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":1065,"dom":153,"expDays":0,"pod":"Gabriel","acreage":"0.31","neighborOk":false,"lastCampaign":null,"price":"5000.00","mls":"LC - 8887","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"0","totalQualified":"0","salesHub":"SH-00473","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1369","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":3055,"dom":153,"expDays":0,"pod":"Gabriel","acreage":"0.48","neighborOk":false,"lastCampaign":null,"price":"7500.00","mls":"LC - 8890","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"2","totalQualified":"0","salesHub":"SH-00474","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1370","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":1065,"dom":153,"expDays":0,"pod":"Gabriel","acreage":"0.32","neighborOk":false,"lastCampaign":null,"price":"5000.00","mls":"LC - 8893","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"1","totalQualified":"0","salesHub":"SH-00475","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1382","address":"Main St 70,Barnwell,SC,29812","state":"South Carolina","county":"Barnwell","profit":4400,"dom":130,"expDays":17,"pod":"Gabriel","acreage":"1.00","neighborOk":true,"lastCampaign":"2026-03-31","price":"20000.00","mls":"LC - 9086","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Inside SubD / No HOA","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"34","totalQualified":"0","salesHub":"SH-00484","priceDrops":"1","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/17/2026","members":"305"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/1/2026","members":"451"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/2/2026","members":"282"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/10/2026","members":"302"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/26/2026","members":"302"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/4/2026","members":"276"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/16/2026","members":"770"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/31/2026","members":"415"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1386","address":"Valhalla Dr,Cleveland,GA,30528","state":"Georgia","county":"White","profit":6333,"dom":125,"expDays":0,"pod":"Jose","acreage":"1.44","neighborOk":true,"lastCampaign":"2026-04-06","price":"18900.00","mls":"LC - 9117","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Inside SubD / HOA","zillowSaves":"3","ddStatus":"Prem DD Clear","totalLeads":"27","totalQualified":"0","salesHub":"SH-00488","priceDrops":"2","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"502"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/1/2026","members":"859"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/16/2026","members":"756"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/24/2026","members":"498"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"92"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/6/2026","members":"36"}],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1392","address":"State Highway 205,Oneonta,NY,13820","state":"New York","county":"Otsego","profit":3043,"dom":112,"expDays":-30,"pod":"Jose","acreage":"0.68","neighborOk":true,"lastCampaign":"2026-03-10","price":"11900.00","mls":"LC - 9176","listedMLS":"No","listedFB":"Yes","listingStatus":"Needs Update","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"0","ddStatus":"Prem DD Clear","totalLeads":"10","totalQualified":"2","salesHub":"SH-00494","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/2/2026","members":"485"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/6/2026","members":"534"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/6/2026","members":"566"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/10/2026","members":"272"}],"isOwned":false,"transactionStage":"At Closing"},{"id":"L - 1408","address":"Jutland Rd,Saint Inigoes,MD,20684","state":"Maryland","county":"St. Mary's","profit":10123,"dom":75,"expDays":12,"pod":"Jose","acreage":"25.28","neighborOk":true,"lastCampaign":"2026-04-08","price":"425900.00","mls":"LC - 9314","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Water View / Water Front","zillowSaves":"29","ddStatus":"Prem DD Clear","totalLeads":"36","totalQualified":"3","salesHub":"SH-00510","priceDrops":"6","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/27/2026","members":"308"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/9/2026","members":"307"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"2/17/2026","members":"601"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/18/2026","members":"311"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/23/2026","members":"310"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/5/2026","members":"637"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/16/2026","members":"535"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/4/2026","members":"1072"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/5/2026","members":"190"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/3/2026","members":"68"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/5/2026","members":"301"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/12/2026","members":"457"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"1/27/2026","members":"183"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/2/2026","members":"534"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"303"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"305"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"16"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"98"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1409","address":"7768 Della Bitta Ln,Bokeelia,FL,33922","state":"Florida","county":"Lee","profit":-2397,"dom":71,"expDays":-5,"pod":"Jose","acreage":"0.18","neighborOk":false,"lastCampaign":"2026-04-09","price":"59900.00","mls":"LC - 9325","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Inside SubD / HOA","zillowSaves":"0","ddStatus":"Prem DD Clear","totalLeads":"10","totalQualified":"2","salesHub":"SH-00511","priceDrops":"4","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/2/2026","members":"891"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"1/20/2026","members":"964"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/6/2026","members":"1846"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/3/2026","members":"122"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"873"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/16/2026","members":"993"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1410","address":"S Medical Lake Rd,Medical Lake,WA,99022","state":"Washington","county":"Spokane","profit":24123,"dom":62,"expDays":26,"pod":"Gabriel","acreage":"2.58","neighborOk":true,"lastCampaign":"2026-04-08","price":"125900.00","mls":"LC - 9340","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"48","ddStatus":"Prem DD Clear","totalLeads":"15","totalQualified":"1","salesHub":"SH-00512","priceDrops":"6","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/10/2026","members":"707"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/17/2026","members":"853"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/21/2026","members":"500"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/23/2026","members":"499"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"2/11/2026","members":"521"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/3/2026","members":"18"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/4/2026","members":"142"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"3/30/2026","members":"740"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"4/3/2026","members":"668"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"324"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1412","address":",Christine,TX,78012","state":"Texas","county":"Atascosa","profit":3700,"dom":56,"expDays":0,"pod":"Gabriel","acreage":"0.46","neighborOk":false,"lastCampaign":null,"price":"7500.00","mls":"LC - 9362","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"0","totalQualified":"0","salesHub":"SH-00514","priceDrops":"0","history":[],"isOwned":true,"transactionStage":"TAH - Owned"},{"id":"L - 1414","address":"108 Wadley St,Sylvania,GA,30467","state":"Georgia","county":"Screven","profit":9295,"dom":54,"expDays":26,"pod":"Jose","acreage":"3.68","neighborOk":true,"lastCampaign":"2026-04-08","price":"23500.00","mls":"LC - 9376","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"13","ddStatus":"Prem DD Clear","totalLeads":"63","totalQualified":"1","salesHub":"SH-00516","priceDrops":"3","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/19/2026","members":"467"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/2/2026","members":"556"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/2/2026","members":"638"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/2/2026","members":"58"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/5/2026","members":"269"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"884"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/16/2026","members":"1152"},{"objective":"Neighbor Reach Out","channel":"Cold Calling","runDate":"2/24/2026","members":"49"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"356"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"74"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"507"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1418","address":",Sylacauga,AL,35151","state":"Alabama","county":"Talladega","profit":6003,"dom":47,"expDays":16,"pod":"Gabriel","acreage":"15.46","neighborOk":true,"lastCampaign":"2026-04-11","price":"29900.00","mls":"LC - 9409","listedMLS":"Yes","listedFB":"Yes","listingStatus":"UC w/o EMD","propertyType":"Outside City - Inside SubD / HOA","zillowSaves":"15","ddStatus":"Prem DD Clear","totalLeads":"43","totalQualified":"2","salesHub":"SH-00520","priceDrops":"4","history":[{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/2/2026","members":"572"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"655"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/3/2026","members":"73"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/27/2026","members":"86"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"2/26/2026","members":"499"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"3/27/2026","members":"585"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"577"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"4/10/2026","members":"544"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"4/10/2026","members":"578"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"4/11/2026","members":"551"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1420","address":"8014 Jersey Rd,Salisbury,MD,21801","state":"Maryland","county":"Wicomico","profit":18903,"dom":40,"expDays":41,"pod":"Gabriel","acreage":"4.50","neighborOk":true,"lastCampaign":"2026-04-08","price":"99900.00","mls":"LC - 9431","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"12","ddStatus":"Prem DD Clear","totalLeads":"40","totalQualified":"1","salesHub":"SH-00522","priceDrops":"4","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/6/2026","members":"1585"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/9/2026","members":"492"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/11/2026","members":"382"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/13/2026","members":"40"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/13/2026","members":"974"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/14/2026","members":"1021"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/12/2026","members":"388"},{"objective":"Buyer Base Reach Out","channel":"Cold Calling","runDate":"3/24/2026","members":"50"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"26"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1423","address":"County Rd 4557,Bivins,TX,75555","state":"Texas","county":"Cass","profit":28503,"dom":33,"expDays":54,"pod":"Jose","acreage":"14.62","neighborOk":true,"lastCampaign":"2026-04-10","price":"79900.00","mls":"LC - 9453","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Large Unrestricted (10>)","zillowSaves":"10","ddStatus":"Prem DD Clear","totalLeads":"12","totalQualified":"0","salesHub":"SH-00525","priceDrops":"2","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/11/2026","members":"701"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/12/2026","members":"287"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/16/2026","members":"1312"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/24/2026","members":"149"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/25/2026","members":"436"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/1/2026","members":"27"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"224"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"988"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1424","address":"Hidden Creek 2 Lot 23,Deep Gap,NC,28618","state":"North Carolina","county":"Wilkes","profit":15195,"dom":33,"expDays":51,"pod":"Jose","acreage":"10.00","neighborOk":true,"lastCampaign":"2026-04-13","price":"59995.00","mls":"LC - 9457","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Inside SubD / HOA","zillowSaves":"4","ddStatus":"Prem DD Clear","totalLeads":"41","totalQualified":"0","salesHub":"SH-00526","priceDrops":"3","history":[{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/12/2026","members":"594"},{"objective":"","channel":"Cold Texting","runDate":"3/12/2026","members":"34"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/11/2026","members":"1001"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/11/2026","members":"329"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/13/2026","members":"416"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/13/2026","members":"128"},{"objective":"Realtors Reach Out","channel":"Cold Calling","runDate":"3/13/2026","members":"120"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/11/2026","members":"81"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"3/28/2026","members":"286"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"491"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/2/2026","members":"87"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/13/2026","members":"798"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1425","address":"Cr 18,Richville,NY,13681","state":"New York","county":"St. Lawrence","profit":18763,"dom":22,"expDays":86,"pod":"Jose","acreage":"11.40","neighborOk":false,"lastCampaign":"2026-04-10","price":"37900.00","mls":"LC - 9474","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Large Unrestricted (10>)","zillowSaves":"11","ddStatus":"Prem DD Clear","totalLeads":"9","totalQualified":"0","salesHub":"SH-00527","priceDrops":"1","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"95"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/23/2026","members":"218"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/27/2026","members":"533"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/27/2026","members":"10"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"445"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"586"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"31"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1426","address":"Charlie Lawson Rd,Virgilina,VA,24598","state":"Virginia","county":"Halifax County","profit":12123,"dom":22,"expDays":56,"pod":"Gabriel","acreage":"4.00","neighborOk":false,"lastCampaign":"2026-04-13","price":"25900.00","mls":"LC - 9478","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"3","ddStatus":"Prem DD Clear","totalLeads":"3","totalQualified":"0","salesHub":"SH-00528","priceDrops":"2","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/23/2026","members":"229"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/24/2026","members":"130"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/31/2026","members":"510"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/27/2026","members":"49"},{"objective":"Price Reduction","channel":"Cold Texting","runDate":"4/13/2026","members":"646"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1428","address":"County Road 323,Orange Grove,TX,78372","state":"Texas","county":"Jim Wells","profit":18003,"dom":19,"expDays":65,"pod":"Gabriel","acreage":"2.16","neighborOk":true,"lastCampaign":"2026-04-10","price":"29900.00","mls":"LC - 9486","listedMLS":"Yes","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"0","ddStatus":"Prem DD Clear","totalLeads":"26","totalQualified":"1","salesHub":"SH-00530","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/25/2026","members":"169"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/26/2026","members":"84"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"137"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/2/2026","members":"387"},{"objective":"Neighbor Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"135"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"317"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1429","address":"S Grueser Rd,Racine,OH,45771","state":"Ohio","county":"Meigs","profit":17250,"dom":18,"expDays":63,"pod":"Jose","acreage":"2.00","neighborOk":false,"lastCampaign":"2026-04-10","price":"25000.00","mls":"LC - 9491","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"8","totalQualified":"0","salesHub":"SH-00531","priceDrops":"0","history":[{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"3/26/2026","members":"27"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/26/2026","members":"256"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/25/2026","members":"119"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/26/2026","members":"160"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/31/2026","members":"176"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/2/2026","members":"31"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"272"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1430","address":"Nixon Run Rd,Martins Ferry,OH,43935","state":"Ohio","county":"Belmont","profit":5700,"dom":18,"expDays":62,"pod":"Gabriel","acreage":"1.11","neighborOk":false,"lastCampaign":"2026-03-31","price":"10000.00","mls":"LC - 9496","listedMLS":"No","listedFB":"Yes","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"10","totalQualified":"0","salesHub":"SH-00532","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/26/2026","members":"185"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"3/30/2026","members":"127"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"3/31/2026","members":"320"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1431","address":"Whippoorwill,Effingham,SC,29541","state":"South Carolina","county":"Florence","profit":25165,"dom":12,"expDays":164,"pod":"Gabriel","acreage":"3.08","neighborOk":false,"lastCampaign":"2026-04-08","price":"44500.00","mls":"LC - 9518","listedMLS":"No","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"7","totalQualified":"0","salesHub":"SH-00533","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/2/2026","members":"398"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"34"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/7/2026","members":"705"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"168"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1432","address":"2231 Mckeen Ln,Effingham,SC,29541","state":"South Carolina","county":"Florence","profit":17115,"dom":8,"expDays":71,"pod":"Gabriel","acreage":"3.08","neighborOk":false,"lastCampaign":null,"price":"29500.00","mls":"LC - 9521","listedMLS":"No","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"2","totalQualified":"0","salesHub":"SH-00534","priceDrops":"0","history":[],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1433","address":"Route 152,Joppa,MD,21085","state":"Maryland","county":"Harford","profit":129403,"dom":12,"expDays":70,"pod":"Gabriel","acreage":"3.80","neighborOk":false,"lastCampaign":"2026-04-10","price":"249900.00","mls":"LC - 9511","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"14","totalQualified":"0","salesHub":"SH-00535","priceDrops":"0","history":[{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/1/2026","members":"16"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/6/2026","members":"675"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/6/2026","members":"687"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"664"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"375"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"42"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1434","address":"Ch #78,Belmont,OH,43718","state":"Ohio","county":"Belmont","profit":62430,"dom":12,"expDays":75,"pod":"Jose","acreage":"50.88","neighborOk":false,"lastCampaign":"2026-04-10","price":"219000.00","mls":"LC - 9515","listedMLS":"No","listedFB":"No","listingStatus":"UC w/o EMD","propertyType":"Outside City - Large Unrestricted (10>)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"17","totalQualified":"0","salesHub":"SH-00536","priceDrops":"0","history":[{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/6/2026","members":"14"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/1/2026","members":"286"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"488"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"39"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"176"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1435","address":"Sanborn Rd,Acton,ME,4001","state":"Maine","county":"York","profit":75903,"dom":8,"expDays":72,"pod":"Jose","acreage":"34.55","neighborOk":false,"lastCampaign":"2026-04-09","price":"199900.00","mls":"LC - 9524","listedMLS":"No","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Large Unrestricted (10>)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"20","totalQualified":"0","salesHub":"SH-00537","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/3/2026","members":"739"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"23"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"21"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/8/2026","members":"555"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/9/2026","members":"274"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1436","address":"S On Hwy 496,Newberry,SC,29108","state":"South Carolina","county":"Newberry","profit":6803,"dom":8,"expDays":71,"pod":"Jose","acreage":"1.21","neighborOk":false,"lastCampaign":"2026-04-13","price":"19900.00","mls":"LC - 9529","listedMLS":"No","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Outside SubD Unrestricted (1> <10)","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"16","totalQualified":"0","salesHub":"SH-00538","priceDrops":"0","history":[{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/1/2026","members":"366"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/6/2026","members":"20"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/13/2026","members":"306"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1437","address":"Walker Rd,Utica,NY,13502","state":"New York","county":"Oneida","profit":18703,"dom":5,"expDays":82,"pod":"Gabriel","acreage":"11.63","neighborOk":false,"lastCampaign":"2026-04-13","price":"39900.00","mls":"LC - 9539","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Outside City - Highway Lot","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"4","totalQualified":"0","salesHub":"SH-00539","priceDrops":"0","history":[{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/11/2026","members":"566"},{"objective":"InvestorBase Reach Out","channel":"Cold Texting","runDate":"4/11/2026","members":"13"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/11/2026","members":"0"},{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/13/2026","members":"751"}],"isOwned":false,"transactionStage":"Clear to Flip"},{"id":"L - 1438","address":"2131 Oakville Waltz Rd,New Boston,MI,48164","state":"Michigan","county":"Monroe County","profit":13303,"dom":5,"expDays":77,"pod":"Jose","acreage":"0.60","neighborOk":false,"lastCampaign":"2026-04-11","price":"19900.00","mls":"LC - 9536","listedMLS":"Yes","listedFB":"No","listingStatus":"Live","propertyType":"Inside City - Outside SubD","zillowSaves":"","ddStatus":"Prem DD Clear","totalLeads":"2","totalQualified":"0","salesHub":"SH-00540","priceDrops":"0","history":[{"objective":"Buyer Base Reach Out","channel":"Cold Texting","runDate":"4/10/2026","members":"111"},{"objective":"Realtors Reach Out","channel":"Cold Texting","runDate":"4/11/2026","members":"688"}],"isOwned":false,"transactionStage":"Clear to Flip"}];
+
+const state={schedule:{},currentMonth:new Date(2026,3,1),activeTab:'all',notes:{},podFilter:null,campInstructions:{},newPropertyIds:[{id:'L - 1437',detected:'2026-04-14'},{id:'L - 1438',detected:'2026-04-14'},{id:'L - 1432',detected:'2026-04-14'}]};
+const TODAY=new Date(); // Monday April 13, 2026
+
+
+// Mock: campaigns that were scheduled last week (April 6-10)
+// These show as completed (greyed past days)
+const LAST_WEEK_SCHEDULE={"2026-04-14":[{"pid":"L - 1426","obj":"Buyer Base Reach Out"},{"pid":"L - 1436","obj":"Buyer Base Reach Out"},{"pid":"L - 1436","obj":"Realtors Reach Out"},{"pid":"L - 1433","obj":"Realtors Reach Out"},{"pid":"L - 1433","obj":"InvestorBase Reach Out"},{"pid":"L - 1435","obj":"Realtors Reach Out"},{"pid":"L - 1410","obj":"Buyer Base Reach Out"},{"pid":"L - 1425","obj":"Buyer Base Reach Out"},{"pid":"L - 1426","obj":"InvestorBase Reach Out"},{"pid":"L - 1428","obj":"Buyer Base Reach Out"},{"pid":"L - 1423","obj":"InvestorBase Reach Out"},{"pid":"L - 1424","obj":"Realtors Reach Out"},{"pid":"L - 1434","obj":"Realtors Reach Out"},{"pid":"L - 1382","obj":"Buyer Base Reach Out"},{"pid":"L - 1429","obj":"Buyer Base Reach Out"},{"pid":"L - 1420","obj":"Buyer Base Reach Out"},{"pid":"L - 1435","obj":"Realtors Reach Out"},{"pid":"L - 1437","obj":"InvestorBase Reach Out"}],"2026-03-31":[{"pid":"L - 1426","obj":"Buyer Base Reach Out"},{"pid":"L - 1314","obj":"Buyer Base Reach Out"},{"pid":"L - 1430","obj":"Buyer Base Reach Out"},{"pid":"L - 1382","obj":"Realtors Reach Out"},{"pid":"L - 1422","obj":"Price Reduction"},{"pid":"L - 1429","obj":"Realtors Reach Out"}],"2026-04-13":[{"pid":"L - 1426","obj":"Price Reduction"},{"pid":"L - 1424","obj":"Buyer Base Reach Out"},{"pid":"L - 1436","obj":"Realtors Reach Out"},{"pid":"L - 1437","obj":"Buyer Base Reach Out"}],"2026-03-30":[{"pid":"L - 1428","obj":"Buyer Base Reach Out"},{"pid":"L - 1424","obj":"Realtors Reach Out"},{"pid":"L - 1430","obj":"Realtors Reach Out"},{"pid":"L - 1386","obj":"Realtors Reach Out"},{"pid":"L - 1386","obj":"Neighbor Reach Out"},{"pid":"L - 1410","obj":"Price Reduction"},{"pid":"L - 1425","obj":"Realtors Reach Out"}],"2026-04-02":[{"pid":"L - 1428","obj":"Realtors Reach Out"},{"pid":"L - 1424","obj":"Realtors Reach Out"},{"pid":"L - 1431","obj":"Realtors Reach Out"},{"pid":"L - 1429","obj":"InvestorBase Reach Out"}],"2026-04-08":[{"pid":"L - 1428","obj":"Neighbor Reach Out"},{"pid":"L - 1408","obj":"Neighbor Reach Out"},{"pid":"L - 1431","obj":"Realtors Reach Out"},{"pid":"L - 1414","obj":"Realtors Reach Out"},{"pid":"L - 1414","obj":"InvestorBase Reach Out"},{"pid":"L - 1414","obj":"Buyer Base Reach Out"},{"pid":"L - 1420","obj":"Neighbor Reach Out"},{"pid":"L - 1435","obj":"InvestorBase Reach Out"},{"pid":"L - 1435","obj":"Realtors Reach Out"},{"pid":"L - 1410","obj":"Realtors Reach Out"}],"2026-04-10":[{"pid":"L - 1428","obj":"Realtors Reach Out"},{"pid":"L - 1423","obj":"Buyer Base Reach Out"},{"pid":"L - 1438","obj":"Buyer Base Reach Out"},{"pid":"L - 1434","obj":"Realtors Reach Out"},{"pid":"L - 1434","obj":"InvestorBase Reach Out"},{"pid":"L - 1418","obj":"Price Reduction"},{"pid":"L - 1418","obj":"Price Reduction"},{"pid":"L - 1429","obj":"Buyer Base Reach Out"},{"pid":"L - 1433","obj":"Realtors Reach Out"},{"pid":"L - 1433","obj":"InvestorBase Reach Out"},{"pid":"L - 1425","obj":"Buyer Base Reach Out"}],"2026-04-01":[{"pid":"L - 1423","obj":"InvestorBase Reach Out"},{"pid":"L - 1434","obj":"Realtors Reach Out"},{"pid":"L - 1436","obj":"Realtors Reach Out"},{"pid":"L - 1386","obj":"Buyer Base Reach Out"},{"pid":"L - 1433","obj":"InvestorBase Reach Out"},{"pid":"L - 0824","obj":"Buyer Base Reach Out"}],"2026-04-09":[{"pid":"L - 1423","obj":"Realtors Reach Out"},{"pid":"L - 1409","obj":"Realtors Reach Out"},{"pid":"L - 1434","obj":"Realtors Reach Out"},{"pid":"L - 1433","obj":"Buyer Base Reach Out"},{"pid":"L - 1435","obj":"InvestorBase Reach Out"},{"pid":"L - 1435","obj":"Realtors Reach Out"},{"pid":"L - 1425","obj":"Realtors Reach Out"},{"pid":"L - 1425","obj":"InvestorBase Reach Out"}],"2026-04-07":[{"pid":"L - 1408","obj":"Realtors Reach Out"},{"pid":"L - 1408","obj":"Buyer Base Reach Out"},{"pid":"L - 1408","obj":"InvestorBase Reach Out"},{"pid":"L - 1418","obj":"Realtors Reach Out"},{"pid":"L - 1431","obj":"InvestorBase Reach Out"},{"pid":"L - 1431","obj":"Buyer Base Reach Out"}],"2026-04-11":[{"pid":"L - 1438","obj":"Realtors Reach Out"},{"pid":"L - 1418","obj":"Price Reduction"},{"pid":"L - 1437","obj":"Buyer Base Reach Out"},{"pid":"L - 1437","obj":"InvestorBase Reach Out"},{"pid":"L - 1437","obj":"Realtors Reach Out"}],"2026-04-06":[{"pid":"L - 1434","obj":"InvestorBase Reach Out"},{"pid":"L - 1436","obj":"InvestorBase Reach Out"},{"pid":"L - 1386","obj":"InvestorBase Reach Out"},{"pid":"L - 1433","obj":"Realtors Reach Out"},{"pid":"L - 1433","obj":"Realtors Reach Out"}],"2026-04-03":[{"pid":"L - 1435","obj":"Realtors Reach Out"},{"pid":"L - 1410","obj":"Price Reduction"}]};
+
+// Mock missed campaigns from last week (scheduled but not completed)
+const MISSED=[];
+const SHORT={'Realtors Reach Out':'Realtor','Buyer Base Reach Out':'Buyer Base','Neighbor Reach Out':'Neighbor','InvestorBase Reach Out':'Investor','Price Reduction':'Price Drop'};
+const CLS={'Realtors Reach Out':'realtor','Buyer Base Reach Out':'buyer','Neighbor Reach Out':'neighbor','InvestorBase Reach Out':'investor','Price Reduction':'pricedrop'};
+const STANDARD_CAMPAIGNS=['Realtors Reach Out','Buyer Base Reach Out','Neighbor Reach Out','InvestorBase Reach Out','Price Reduction'];
+
+function dateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function isSameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+function fmt$(n){return n<0?'-$'+Math.abs(n).toLocaleString():'$'+n.toLocaleString()}
+function shortAddr(a){if(!a)return'—';const p=a.split(',');let s=p[0].trim();const city=p.length>1?p[1].trim():'';const st=p.length>2?p[2].trim():'';if(!s&&city)s=city;if(s.length>24)s=s.substring(0,22)+'…';return city&&s!==city?s+', '+city:st?s+', '+st:s}
+function daysSince(ds){if(!ds)return 999;return Math.round((TODAY-new Date(ds))/86400000)}
+
+function renderCard(prop,hl){
+  const pod=prop.pod==='Jose'?'badge-jose':'badge-gab',podL=prop.pod==='Gabriel'?'Gab':prop.pod;
+  const exp=prop.expDays===0?'<span class="badge badge-tah">TAH Owned</span>':prop.expDays<0?'<span class="badge badge-exp urgent">Expired</span>':`<span class="badge badge-exp${prop.expDays<=15?' urgent':''}">Exp: ${prop.expDays}d</span>`;
+  const last=prop.lastCampaign?daysSince(prop.lastCampaign)+'d ago':'Never';
+  let hlBox='';
+  if(hl==='profit')hlBox=`<span class="hl-value hl-profit">${fmt$(prop.profit)}</span>`;
+  if(hl==='expire')hlBox=`<span class="hl-value hl-expire">${prop.expDays<0?'EXPIRED':prop.expDays+'d to expiration'}</span>`;
+  if(hl==='lastcamp')hlBox=`<span class="hl-value hl-lastcamp">Last campaign: ${last}</span>`;
+  const chips=STANDARD_CAMPAIGNS.map(obj=>{
+    const cls=CLS[obj]||'realtor',s=SHORT[obj]||obj;
+    return`<span class="campaign-chip ${cls}" draggable="true" data-pid="${prop.id}" data-obj="${obj}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" ondragstart="chipDS(event)" ondragend="chipDE(event)">${s}</span>`;
+  }).join('');
+  return`<div class="prop-card" onclick="showModal('${prop.id}')"><div class="prop-card-top"><span class="prop-card-address">${shortAddr(prop.address)}</span><div class="prop-card-badges"><span class="badge ${pod}">${podL}</span>${exp}</div></div>
+    ${hlBox?'<div style="margin-bottom:5px">'+hlBox+'</div>':''}
+    <div class="prop-card-meta"><span>${prop.state}</span>${hl!=='profit'?'<span>'+fmt$(prop.profit)+'</span>':''}${hl!=='expire'?'<span>Exp:'+prop.expDays+'d</span>':''}${hl!=='lastcamp'?'<span>Last:'+last+'</span>':''}<span>${prop.acreage}ac</span></div>
+    <div class="prop-card-campaigns">${chips}</div></div>`;
+}
+
+function scoreAIRecommendations(){
+  const recs=[];
+  const typeMod={'Realtors Reach Out':0,'Buyer Base Reach Out':-5,'Neighbor Reach Out':-10,'InvestorBase Reach Out':-25,'Price Reduction':-15};
+  
+  PROPS.forEach(prop=>{
+    // Skip TAH Owned and expired properties
+    if(prop.isOwned)return;
+    if(prop.expDays<0)return;
+    // Base score for property
+    let base=0;
+    const reasons=[];
+    
+    // Fresh launch bonus
+    if(!prop.history||prop.history.length===0){base+=200;reasons.push('Never campaigned — fresh launch priority');}
+    
+    // Expiration urgency
+    if(prop.expDays>0){
+      if(prop.expDays<=14){base+=150;reasons.push(`Only ${prop.expDays}d to expiration`);}
+      else if(prop.expDays<=30){base+=100;reasons.push(`${prop.expDays}d to expiration — approaching`);}
+      else if(prop.expDays<=60){base+=50;}
+      else{base+=20;}
+    }
+    
+    // Profit bonus
+    if(prop.profit>=30000){base+=80;reasons.push(`High-value: ${fmt$(prop.profit)}`);}
+    else if(prop.profit>=15000){base+=50;reasons.push(`Solid profit: ${fmt$(prop.profit)}`);}
+    else if(prop.profit>=5000){base+=20;}
+    else if(prop.profit>0){base+=5;}
+    
+    // DOM factor
+    if(prop.dom>=100){base+=30;reasons.push(`${prop.dom} DOM — sitting too long`);}
+    else if(prop.dom>=60){base+=15;}
+    
+    // Days since last campaign
+    const dsl=daysSince(prop.lastCampaign);
+    if(dsl>=30){base+=40;reasons.push('30+ days since last campaign');}
+    else if(dsl>=14){base+=20;reasons.push(`${dsl}d since last campaign`);}
+    
+    // Coverage gap bonus — check which outreach types have been run
+    const doneTypes=new Set();
+    if(prop.history)prop.history.forEach(h=>{if(h.objective)doneTypes.add(h.objective);});
+    const coreTypes=['Realtors Reach Out','Buyer Base Reach Out','Neighbor Reach Out','InvestorBase Reach Out'];
+    const missing=coreTypes.filter(t=>!doneTypes.has(t));
+    if(missing.length>=3){base+=40;reasons.push(`${missing.length} core types never run`);}
+    else if(missing.length>0){base+=missing.length*15;}
+    
+    // Generate a recommendation for each campaign type
+    STANDARD_CAMPAIGNS.forEach(obj=>{
+      let score=base+(typeMod[obj]||0);
+      let reason=reasons.slice(0,2).join(' · ');
+      
+      // Extra boost if this specific type hasn't been done
+      if(!doneTypes.has(obj)&&obj!=='Price Reduction'){
+        score+=25;
+        reason+=(reason?' · ':'')+SHORT[obj]+' never run';
+      }
+      
+      // Price Reduction only makes sense if there have been price drops
+      if(obj==='Price Reduction'){
+        if(prop.priceDrops&&parseInt(prop.priceDrops)>0){
+          score+=20;
+          reason+=(reason?' · ':'')+'Has price drops — announce to market';
+        }else{
+          score-=50; // Deprioritize if no price drops
+        }
+      }
+      
+      score=Math.max(score,1);
+      recs.push({pid:prop.id,obj,score,reason,prop});
+    });
+  });
+  
+  // Sort by score descending
+  recs.sort((a,b)=>b.score-a.score);
+  return recs;
+}
+
+function renderAICard(rec,rank){
+  const cls=CLS[rec.obj]||'realtor',s=SHORT[rec.obj]||rec.obj;
+  const prop=rec.prop;
+  const podCls=prop.pod==='Jose'?'badge-jose':'badge-gab',podL=prop.pod==='Gabriel'?'Gab':prop.pod;
+  const expLbl=prop.expDays===0?'TAH':'Exp:'+prop.expDays+'d';
+  return`<div class="ai-card">
+    <div class="ai-card-rank">#${rank}</div>
+    <div class="ai-card-top">
+      <span class="ai-card-address" onclick="showModal('${prop.id}')">${shortAddr(prop.address)}</span>
+      <span class="badge ${podCls}">${podL}</span>
+      <span class="ai-card-score">${rec.score}pts</span>
+    </div>
+    <div class="ai-card-reason">${rec.reason||'Standard outreach'}</div>
+    <div class="ai-card-chip-row">
+      <span class="campaign-chip ${cls}" draggable="true" data-pid="${prop.id}" data-obj="${rec.obj}" onmousedown="event.stopPropagation()" onclick="event.stopPropagation()" ondragstart="chipDS(event)" ondragend="chipDE(event)">${s}</span>
+      <span style="font-size:9px;color:var(--text3)">${fmt$(prop.profit)} · ${expLbl} · DOM:${prop.dom}</span>
+    </div>
+  </div>`;
+}
+
+function renderSB(tab){
+  const el=document.getElementById('sb-'+tab);
+  const FP=getFilteredProps();
+  if(tab==='ai'){
+    const recs=scoreAIRecommendations();
+    const filtered=state.podFilter?recs.filter(r=>(r.prop.pod||'').trim()===state.podFilter):recs;
+    const top=filtered.slice(0,30);
+    el.innerHTML='<div style="padding:8px 8px 4px;font-size:10px;color:var(--text3);font-style:italic">AI-ranked campaigns by priority score. Drag any chip to the calendar.</div>'+top.map((r,i)=>renderAICard(r,i+1)).join('');
+    return;
+  }
+  if(tab==='new'){
+    const now=new Date();
+    const activeNew=state.newPropertyIds.filter(n=>{
+      const det=new Date(n.detected);
+      const daysDiff=Math.round((now-det)/(86400000));
+      return daysDiff<=10;
+    });
+    state.newPropertyIds=activeNew;
+    const newIds=new Set(activeNew.map(n=>n.id));
+    const newProps=FP.filter(p=>newIds.has(p.id));
+    if(newProps.length===0){el.innerHTML='<div class="empty-day" style="padding:40px">No new properties detected.<br><br><span style="font-size:10px;color:var(--text3)">New properties appear here when a CSV refresh contains listings that weren\'t in the previous upload. They stay for 10 days.</span></div>';return;}
+    el.innerHTML='<div style="padding:8px 8px 4px;font-size:10px;color:#059669;font-weight:600">\u{1F195} '+newProps.length+' new propert'+(newProps.length===1?'y':'ies')+' added recently</div>'+newProps.map(p=>{
+      const entry=activeNew.find(n=>n.id===p.id);
+      const det=entry?new Date(entry.detected):now;
+      const daysAgo=Math.round((now-det)/86400000);
+      const daysLeft=10-daysAgo;
+      return'<div style="font-size:9px;color:var(--text3);padding:2px 10px;margin-bottom:-2px">Added '+daysAgo+'d ago \u2014 '+daysLeft+'d left in New</div>'+renderCard(p,null);
+    }).join('');
+    return;
+  }
+  let list,hl=null;
+  if(tab==='all'){list=[...FP];}
+  else if(tab==='profit'){list=[...FP].sort((a,b)=>b.profit-a.profit);hl='profit';}
+  else if(tab==='dom'){list=[...FP].filter(p=>p.expDays!==0).sort((a,b)=>a.expDays-b.expDays);hl='expire';}
+  else if(tab==='lastcamp'){list=[...FP].sort((a,b)=>daysSince(b.lastCampaign)-daysSince(a.lastCampaign));hl='lastcamp';}
+  else if(tab==='owned'){list=FP.filter(p=>p.isOwned);}
+  el.innerHTML=list.length?list.map(p=>renderCard(p,hl)).join(''):'<div class="empty-day" style="padding:40px">No properties</div>';
+}
+
+function renderCal(){
+  const cal=document.getElementById('calendar'),y=state.currentMonth.getFullYear(),m=state.currentMonth.getMonth();
+  const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=mn[m]+' '+y;
+  let f=new Date(y,m,1);while(f.getDay()!==1)f.setDate(f.getDate()-1);
+  let h='';['Mon','Tue','Wed','Thu','Fri'].forEach(d=>{h+=`<div class="cal-header-cell">${d}</div>`});
+  let c=new Date(f);
+  for(let w=0;w<5;w++){for(let d=0;d<5;d++){
+    const ds=dateStr(c);
+    const isO=c.getMonth()!==m;
+    const isP=c<TODAY&&!isSameDay(c,TODAY);
+    const isT=isSameDay(c,TODAY);
+    const items=state.schedule[ds]||[];
+    const cnt=items.length;
+    let cc='zero';if(cnt>=10)cc='ok';else if(cnt>0)cc='low';
+    const up=new Set(items.map(i=>i.pid));let dp=0;up.forEach(pid=>{const p=PROPS.find(x=>x.id===pid);if(p)dp+=p.profit});
+    const ps=dp>0?'$'+dp.toLocaleString():'';
+    let jc=0,gc=0;items.forEach(i=>{const p=PROPS.find(x=>x.id===i.pid);if(p&&p.pod==='Jose')jc++;else gc++});
+    const dn=c.getDate(),ml=c.getMonth()!==m?' '+mn[c.getMonth()].substring(0,3):'';
+    const cards=items.map((it,idx)=>{
+      const cls=CLS[it.obj]||'realtor',s=SHORT[it.obj]||'';
+      const p=PROPS.find(x=>x.id===it.pid),addr=p?shortAddr(p.address).split(',')[0]:'';
+      const pN=p?p.pod:'',pC=pN==='Jose'?'jose':'gab',pL=pN==='Gabriel'?'Gab':pN;
+      return`<div class="sched-card ${cls}" draggable="true" data-sd="${ds}" data-si="${idx}" ondragstart="schedDS(event)" ondragend="schedDE(event)" onclick="showModal('${it.pid}')">
+        <span class="sched-pod ${pC}">${pL}</span><span class="sched-type">${s}</span><span class="sched-addr">${addr}</span>
+        <button class="remove-btn" onclick="remSched('${ds}',${idx},event)">\u00d7</button></div>`;
+    }).join('');
+    let dayClass='cal-day';
+    if(isT)dayClass+=' today';
+    if(isP)dayClass+=' past';
+    if(isO)dayClass+=' outside';
+    const emptyMsg=!isP&&!isO&&cnt===0?'<div class="empty-day">Drop campaigns here</div>':'';
+    h+=`<div class="${dayClass}" data-date="${ds}">
+      <div class="cal-day-header"><span class="cal-day-num">${dn}${ml}</span><div class="cal-day-stats">
+        ${!isO&&cnt>0?`<span class="cal-day-profit">${ps}</span>`:''}${!isO&&cnt>0?`<span class="cal-day-pod">J:${jc} G:${gc}</span>`:''}
+        ${!isO?`<span class="cal-day-count ${cc}">${cnt}</span>`:''}</div></div>
+      <div class="cal-day-cards">${cards}${emptyMsg}</div></div>`;
+    c.setDate(c.getDate()+1);if(c.getDay()===6)c.setDate(c.getDate()+2);if(c.getDay()===0)c.setDate(c.getDate()+1);
+  }}
+  cal.innerHTML=h;
+  cal.querySelectorAll('.cal-day').forEach(day=>{
+    if(day.classList.contains('outside')||day.classList.contains('past'))return;
+    day.ondragover=e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';day.classList.add('drop-target')};
+    day.ondragleave=()=>day.classList.remove('drop-target');
+    day.ondrop=e=>{e.preventDefault();day.classList.remove('drop-target');doDrop(day.dataset.date)};
+  });
+}
+
+// RESCHEDULE SECTION
+function renderResched(){
+  const el=document.getElementById('resched-section');
+  if(MISSED.length===0){el.classList.remove('has-items');el.innerHTML='';return;}
+  el.classList.add('has-items');
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h=`<div class="resched-title">\u26a0 Needs Rescheduling <span class="resched-count">${MISSED.length}</span></div>`;
+  MISSED.forEach((mi,idx)=>{
+    const s=SHORT[mi.obj]||mi.obj;
+    const cls=CLS[mi.obj]||'realtor';
+    const p=PROPS.find(x=>x.id===mi.pid);
+    const addr=p?shortAddr(p.address):'';
+    const podCls=p?(p.pod==='Jose'?'badge-jose':'badge-gab'):'';
+    const podL=p?(p.pod==='Gabriel'?'Gab':p.pod):'';
+    const d=new Date(mi.date);
+    const dateLabel=mn[d.getMonth()]+' '+d.getDate();
+    h+=`<div class="resched-card" draggable="true" data-resched-idx="${idx}" ondragstart="reschedDS(event)" ondragend="reschedDE(event)">
+      <div class="resched-card-top">
+        <span class="campaign-chip ${cls}" style="cursor:inherit;pointer-events:none">${s}</span>
+        <span class="resched-card-addr">${addr}</span>
+        <span class="badge ${podCls}">${podL}</span>
+      </div>
+      <div style="margin-top:4px">
+        <span class="resched-card-date">Prepared ${dateLabel} \u2014 Needs to Reschedule</span>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=h;
+}
+
+function updateStats(){
+  const todayDs=dateStr(TODAY);
+  let tot=0;const ap=new Set();
+  for(const[ds,items]of Object.entries(state.schedule)){
+    if(ds>=todayDs){tot+=items.length;items.forEach(i=>ap.add(i.pid));}
+  }
+  let pr=0;ap.forEach(pid=>{const p=PROPS.find(x=>x.id===pid);if(p)pr+=p.profit});
+  const activeProps=PROPS.filter(p=>!p.isOwned&&p.expDays>=0).length;
+  document.getElementById('stat-props').textContent=PROPS.length;
+  document.getElementById('stat-sched').textContent=tot;
+  document.getElementById('stat-unplan').textContent=Math.max(0,activeProps*STANDARD_CAMPAIGNS.length-tot);
+  document.getElementById('stat-profit').textContent='$'+pr.toLocaleString();
+}
+
+
+// ===== FIREBASE =====
+firebase.initializeApp({
+  apiKey:"AIzaSyD6uBznArWcDzAT7_YRocIUnlyyDnxAa8Y",authDomain:"dispo-planner-v2.firebaseapp.com",
+  projectId:"dispo-planner-v2",storageBucket:"dispo-planner-v2.firebasestorage.app",
+  messagingSenderId:"331696607607",appId:"1:331696607607:web:7e0b01cd506a0568935172"
+});
+const db=firebase.firestore();
+
+async function saveToFirestore(){
+  try{
+    await db.collection('plannerV2').doc('data').set({
+      props:JSON.stringify(PROPS),schedule:JSON.stringify(state.schedule),
+      missed:JSON.stringify(MISSED),lastWeekSchedule:JSON.stringify(LAST_WEEK_SCHEDULE),
+      campInstructions:JSON.stringify(state.campInstructions),
+      newPropertyIds:JSON.stringify(state.newPropertyIds),
+      lastUpdated:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const el=document.getElementById('save-indicator');if(el){el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
+  }catch(e){console.error('Save failed:',e);}
+}
+
+async function loadFromFirestore(){
+  try{
+    const doc=await db.collection('plannerV2').doc('data').get();
+    if(doc.exists){
+      const d=doc.data();
+      PROPS=JSON.parse(d.props||'[]');
+      state.schedule=JSON.parse(d.schedule||'{}');
+      MISSED=JSON.parse(d.missed||'[]');
+      LAST_WEEK_SCHEDULE=JSON.parse(d.lastWeekSchedule||'{}');
+      state.campInstructions=JSON.parse(d.campInstructions||'{}');
+      state.newPropertyIds=JSON.parse(d.newPropertyIds||'[]');
+      return PROPS.length>0;
+    }
+  }catch(e){console.error('Load failed:',e);}
+  return false;
+}
+
+function processCSVData(pipelineRows,historyRows){
+  const today=new Date();
+  const histByLid={};
+  historyRows.forEach(c=>{
+    const lid=(c['The Market Hub #']||'').trim();
+    const obj=(c['Campaign Objective']||'').trim();
+    const ch=(c['Outreach Channel']||'').trim();
+    const status=(c['Campaign Status']||'').trim();
+    const rd=(c['Campaign Run Date']||'').trim();
+    const members=(c['Actual Campaign Members']||'').trim();
+    if(!lid||!obj)return;
+    if(!histByLid[lid])histByLid[lid]=[];
+    if(status==='Completed')histByLid[lid].push({objective:obj,channel:ch,runDate:rd,members});
+  });
+  const newSchedule={};
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-15);
+  historyRows.forEach(c=>{
+    const lid=(c['The Market Hub #']||'').trim();
+    const obj=(c['Campaign Objective']||'').trim();
+    const status=(c['Campaign Status']||'').trim();
+    const rd=(c['Campaign Run Date']||'').trim();
+    if(!lid||!obj||!rd)return;
+    let d;try{const p=rd.split('/');d=new Date(parseInt(p[2]),parseInt(p[0])-1,parseInt(p[1]));}catch(e){return;}
+    if(d<cutoff)return;
+    const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    if(status==='Completed'&&d<today){
+      if(!newSchedule[ds])newSchedule[ds]=[];
+      newSchedule[ds].push({pid:lid,obj});
+    }
+    if(['Requested','Ready','Scheduled'].includes(status)&&d>=new Date(today.getFullYear(),today.getMonth(),today.getDate())){
+      if(!newSchedule[ds])newSchedule[ds]=[];
+      newSchedule[ds].push({pid:lid,obj});
+    }
+  });
+  const newProps=[];
+  pipelineRows.forEach(p=>{
+    const lid=(p['Main Listing']||'').trim();if(!lid)return;
+    const stage=(p['Transaction Stage']||'').trim();
+    const isOwned=stage.includes('TAH - Owned');
+    let profit=Math.round(parseFloat((p['Potential Profit']||'0').replace(/,/g,''))||0);
+    let exp=Math.round(parseFloat((p['# of Days to Expiration']||'0'))||0);
+    if(isOwned)exp=0;
+    let priceDrops=Math.round(parseFloat((p['# of Price Drops']||'0'))||0);
+    const hist=histByLid[lid]||[];
+    let lastCamp=null;
+    hist.forEach(h=>{try{const pp=h.runDate.split('/');const d=new Date(parseInt(pp[2]),parseInt(pp[0])-1,parseInt(pp[1]));if(!lastCamp||d>lastCamp)lastCamp=d;}catch(e){}});
+    const lastCampStr=lastCamp?lastCamp.getFullYear()+'-'+String(lastCamp.getMonth()+1).padStart(2,'0')+'-'+String(lastCamp.getDate()).padStart(2,'0'):null;
+    newProps.push({
+      id:lid,address:(p['Property Address']||'').trim().replace(/"/g,''),
+      state:(p['State']||'').trim(),county:(p['County']||'').trim(),
+      profit,dom:Math.round(parseFloat((p['Website DOM']||'0'))||0),expDays:exp,
+      pod:(p['POD']||'').trim(),acreage:(p['Total Property Size']||'').trim(),
+      neighborOk:(p['Neighbor Campaign']||'').trim()==='Yes',lastCampaign:lastCampStr,
+      price:(p['Current Cash Price']||'').trim(),mls:(p['MLS']||'').trim(),
+      listedMLS:(p['Listed on MLS']||'').trim(),listedFB:(p['Listed on FB?']||'').trim(),
+      listingStatus:(p['Listing Status']||'').trim(),propertyType:(p['Property Type']||'').trim(),
+      zillowSaves:(p['Zillow Saves']||'').trim(),ddStatus:(p['Property DD Status']||'').trim(),
+      totalLeads:(p['Total Sourced Leads']||'').trim(),totalQualified:(p['Total Qualified Leads']||'').trim(),
+      salesHub:(p['The Sales Hub']||'').trim(),priceDrops:String(priceDrops),
+      history:hist,isOwned,transactionStage:stage
+    });
+  });
+  return{props:newProps,schedule:newSchedule};
+}
+
+async function processUpload(){
+  const pFile=document.getElementById('file-pipeline').files[0];
+  const hFile=document.getElementById('file-history').files[0];
+  const status=document.getElementById('upload-status');
+  if(!pFile||!hFile){status.textContent='Please select both files.';status.className='upload-status error';return;}
+  status.textContent='Processing...';status.className='upload-status';
+  document.getElementById('process-btn').disabled=true;
+  try{
+    const[pText,hText]=await Promise.all([pFile.text(),hFile.text()]);
+    const pipeline=Papa.parse(pText,{header:true,skipEmptyLines:true}).data;
+    const history=Papa.parse(hText,{header:true,skipEmptyLines:true}).data;
+    const result=processCSVData(pipeline,history);
+    PROPS=result.props;state.schedule=result.schedule;
+    MISSED=[];LAST_WEEK_SCHEDULE={};state.campInstructions={};state.newPropertyIds=[];
+    await saveToFirestore();
+    document.getElementById('upload-panel').classList.add('hidden');
+    document.getElementById('main-app').style.display='grid';
+    initApp();
+    status.textContent='Done!';status.className='upload-status success';
+  }catch(e){status.textContent='Error: '+e.message;status.className='upload-status error';console.error(e);}
+  document.getElementById('process-btn').disabled=false;
+}
+
+async function handleRefreshUpload(files){
+  if(files.length<2){alert('Please select both CSV files (hold Ctrl/Cmd to select multiple).');return;}
+  let pText='',hText='';
+  for(const f of files){
+    const text=await f.text();const lower=f.name.toLowerCase();
+    if(lower.includes('pipeline')||lower.includes('properties')||lower.includes('performance'))pText=text;
+    else hText=text;
+  }
+  if(!pText||!hText){alert('Could not identify files. Make sure filenames contain "performance/pipeline/properties" and "history".');return;}
+  const oldIds=new Set(PROPS.map(p=>p.id));
+  const pipeline=Papa.parse(pText,{header:true,skipEmptyLines:true}).data;
+  const history=Papa.parse(hText,{header:true,skipEmptyLines:true}).data;
+  const result=processCSVData(pipeline,history);
+  const savedInstructions={...state.campInstructions};
+  PROPS=result.props;state.schedule=result.schedule;MISSED=[];
+  state.campInstructions=savedInstructions;
+  const todayStr=new Date().toISOString().split('T')[0];
+  const newIds=PROPS.filter(p=>!oldIds.has(p.id)).map(p=>({id:p.id,detected:todayStr}));
+  if(newIds.length>0){
+    state.newPropertyIds=[...state.newPropertyIds,...newIds];
+    alert('\u{1F195} '+newIds.length+' new propert'+(newIds.length===1?'y':'ies')+' detected! Check the New tab.');
+  }
+  await saveToFirestore();
+  ['all','profit','dom','lastcamp','owned','ai','new'].forEach(t=>renderSB(t));
+  renderResched();renderCal();updateStats();
+}
+
+// DRAG
+let _drag=null;
+function chipDS(e){const el=e.target.closest('.campaign-chip');_drag={t:'chip',pid:el.dataset.pid,obj:el.dataset.obj};e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='copy';setTimeout(()=>el.classList.add('dragging'),0);e.stopPropagation()}
+function chipDE(e){e.target.closest('.campaign-chip').classList.remove('dragging');_drag=null}
+function schedDS(e){const el=e.target.closest('.sched-card');_drag={t:'sched',fd:el.dataset.sd,si:+el.dataset.si};e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='copy';setTimeout(()=>el.style.opacity='.3',0);e.stopPropagation()}
+function schedDE(e){const el=e.target.closest('.sched-card');if(el)el.style.opacity='1';_drag=null}
+function reschedDS(e){const el=e.target.closest('.resched-card');const idx=+el.dataset.reschedIdx;const mi=MISSED[idx];_drag={t:'resched',pid:mi.pid,obj:mi.obj,date:mi.date,idx};e.dataTransfer.setData('text/plain','x');e.dataTransfer.effectAllowed='copy';setTimeout(()=>el.style.opacity='.4',0);e.stopPropagation()}
+function reschedDE(e){const el=e.target.closest('.resched-card');if(el)el.style.opacity='1';_drag=null}
+
+// Count business days between two date strings (absolute distance)
+function bizDaysBetween(ds1,ds2){
+  let d1=new Date(ds1),d2=new Date(ds2);
+  if(d1>d2){const tmp=d1;d1=d2;d2=tmp;}
+  let count=0;const cur=new Date(d1);
+  cur.setDate(cur.getDate()+1);
+  while(cur<=d2){
+    const dow=cur.getDay();
+    if(dow>=1&&dow<=5)count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
+// Check if same property+outreach exists within 5 biz days of targetDate
+function findConflict(pid,obj,targetDate,excludeDate){
+  for(const[ds,items]of Object.entries(state.schedule)){
+    if(ds===targetDate)continue; // don't conflict with self on same day
+    if(excludeDate&&ds===excludeDate)continue; // exclude the day we're moving FROM
+    for(const item of items){
+      if(item.pid===pid&&item.obj===obj){
+        const gap=bizDaysBetween(ds,targetDate);
+        if(gap<=5)return ds;
+      }
+    }
+  }
+  return null;
+}
+
+// Format date for display
+function fmtDate(ds){const d=new Date(ds);const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return mn[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}
+
+// Show confirmation popup
+function showConfirm(msg,onYes,onNo){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  const box=document.createElement('div');
+  box.style.cssText='background:#fff;border-radius:14px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.2);text-align:center';
+  box.innerHTML=`<div style="font-size:14px;font-weight:600;color:#1F2937;line-height:1.6;margin-bottom:20px">${msg}</div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button id="conf-no" style="padding:8px 28px;border-radius:8px;border:1px solid #D1D5DB;background:#F3F4F6;color:#1F2937;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px">No</button>
+      <button id="conf-yes" style="padding:8px 28px;border-radius:8px;border:none;background:#4F6BED;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px">Yes, Schedule</button>
+    </div>`;
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  box.querySelector('#conf-yes').onclick=()=>{document.body.removeChild(overlay);onYes();};
+  box.querySelector('#conf-no').onclick=()=>{document.body.removeChild(overlay);if(onNo)onNo();};
+  overlay.onclick=e=>{if(e.target===overlay){document.body.removeChild(overlay);if(onNo)onNo();}};
+}
+
+function doDrop(targetDate){
+  if(!_drag)return;
+  
+  if(_drag.t==='chip'){
+    const pid=_drag.pid,obj=_drag.obj;
+    const conflict=findConflict(pid,obj,targetDate,null);
+    _drag=null;
+    
+    // Prevent duplicate: same property+type on same day
+    const dupeOnDay=(state.schedule[targetDate]||[]).some(x=>x.pid===pid&&x.obj===obj);
+    if(dupeOnDay){_drag=null;return;}
+    if(conflict){
+      const prop=PROPS.find(p=>p.id===pid);
+      const name=prop?shortAddr(prop.address):'this property';
+      const campName=SHORT[obj]||obj;
+      const isPast=new Date(conflict)<TODAY;
+      const verb=isPast?'already ran on':'is already scheduled on';
+      showConfirm(
+        `<strong>${campName}</strong> campaign for <strong>${name}</strong> ${verb} <strong>${fmtDate(conflict)}</strong>.<br><br>Do you want to schedule this anyway?`,
+        ()=>{
+          if(!state.schedule[targetDate])state.schedule[targetDate]=[];
+          state.schedule[targetDate].push({pid,obj});
+          renderResched();renderCal();updateStats();
+        }
+      );
+    }else{
+      if(!state.schedule[targetDate])state.schedule[targetDate]=[];
+      state.schedule[targetDate].push({pid,obj});
+      renderCal();updateStats();saveToFirestore();
+    }
+    
+  }else if(_drag.t==='sched'){
+    const fromDate=_drag.fd,si=_drag.si;
+    const from=state.schedule[fromDate];if(!from){_drag=null;return;}
+    const item=from[si];
+    const conflict=findConflict(item.pid,item.obj,targetDate,fromDate);
+    _drag=null;
+    
+    if(conflict){
+      const prop=PROPS.find(p=>p.id===item.pid);
+      const name=prop?shortAddr(prop.address):'this property';
+      const campName=SHORT[item.obj]||item.obj;
+      const isPast2=new Date(conflict)<TODAY;
+      const verb2=isPast2?'already ran on':'is already scheduled on';
+      showConfirm(
+        `<strong>${campName}</strong> campaign for <strong>${name}</strong> ${verb2} <strong>${fmtDate(conflict)}</strong>.<br><br>Do you want to move this anyway?`,
+        ()=>{
+          const[moved]=from.splice(si,1);
+          if(!state.schedule[targetDate])state.schedule[targetDate]=[];
+          state.schedule[targetDate].push(moved);
+          renderCal();updateStats();saveToFirestore();
+        },
+        ()=>{renderCal();}
+      );
+    }else{
+      const[moved]=from.splice(si,1);
+      if(!state.schedule[targetDate])state.schedule[targetDate]=[];
+      state.schedule[targetDate].push(moved);
+      renderCal();updateStats();saveToFirestore();
+    }
+  }else if(_drag.t==='resched'){
+    const pid=_drag.pid,obj=_drag.obj,missedDate=_drag.date,idx=_drag.idx;
+    _drag=null;
+    if(!state.schedule[targetDate])state.schedule[targetDate]=[];
+    state.schedule[targetDate].push({pid:pid,obj:obj,fromMissed:true,missedDate:missedDate});
+    if(idx>=0&&idx<MISSED.length)MISSED.splice(idx,1);
+    renderResched();renderCal();updateStats();saveToFirestore();
+    
+  }else{
+    _drag=null;
+  }
+}
+function remSched(ds,idx,e){
+  e.stopPropagation();
+  if(!state.schedule[ds])return;
+  const removed=state.schedule[ds].splice(idx,1)[0];
+  if(removed&&removed.fromMissed){
+    MISSED.push({pid:removed.pid,obj:removed.obj,date:removed.missedDate});
+    renderResched();
+  }
+  renderCal();updateStats();saveToFirestore();
+}
+
+// MODAL
+function showModal(pid){
+  const prop=PROPS.find(p=>p.id===pid);if(!prop)return;
+  let expTag='';
+  if(prop.expDays===0)expTag='<span class="modal-tag t-owned">TAH Owned</span>';
+  else if(prop.expDays<0)expTag='<span class="modal-tag t-exp-urgent">Contract Expired</span>';
+  else if(prop.expDays<=15)expTag=`<span class="modal-tag t-exp-urgent">Expires: ${prop.expDays}d</span>`;
+  else expTag=`<span class="modal-tag t-exp">Expires: ${prop.expDays}d</span>`;
+  const podCls=prop.pod==='Jose'?'badge-jose':'badge-gab',podL=prop.pod==='Gabriel'?'Gab':prop.pod;
+  let hist='';
+  if(prop.history?.length){const rows=prop.history.map(h=>`<tr><td>${h.runDate}</td><td>${SHORT[h.objective]||''}</td><td>${h.channel||''}</td><td>${h.members||''}</td></tr>`).join('');
+    hist=`<div class="history-scroll"><table class="modal-history-table"><thead><tr><th>Date</th><th>Outreach</th><th>Channel</th><th>Members</th></tr></thead><tbody>${rows}</tbody></table></div>`;}
+  else hist='<div class="modal-history-empty">No campaigns run yet.</div>';
+  document.getElementById('modal-content').innerHTML=`
+    <div class="modal-header"><div class="modal-header-top"><div><div class="modal-title">${prop.address}</div>
+      <div class="modal-subtitle">${prop.id} · ${prop.salesHub||''} · ${prop.acreage} ac · ${prop.propertyType||''}</div></div>
+      <button class="modal-close-x" onclick="document.getElementById('modal').classList.remove('show')">×</button></div>
+      <div class="modal-tags"><span class="badge ${prop.pod==='Jose'?'badge-jose':'badge-gab'}" style="font-size:11px;padding:3px 10px">${podL}</span>${expTag}</div></div>
+    <div class="modal-body">
+      <div class="modal-section"><div class="modal-section-title">Property Snapshot</div><div class="modal-grid">
+        <div class="modal-field"><span class="fl">State / County</span><span class="fv">${prop.state} / ${prop.county}</span></div>
+        <div class="modal-field"><span class="fl">Cash Price</span><span class="fv">${prop.price?'$'+Number(prop.price).toLocaleString():'—'}</span></div>
+        <div class="modal-field"><span class="fl">Profit</span><span class="fv ${prop.profit>=0?'positive':'negative'}">${fmt$(prop.profit)}</span></div>
+        <div class="modal-field"><span class="fl">Acreage</span><span class="fv">${prop.acreage} ac</span></div>
+        <div class="modal-field"><span class="fl">DOM</span><span class="fv">${prop.dom}</span></div>
+        <div class="modal-field"><span class="fl">Expiration</span><span class="fv">${prop.expDays===0?'TAH Owned':prop.expDays+'d'}</span></div>
+        <div class="modal-field"><span class="fl">POD</span><span class="fv">${prop.pod}</span></div>
+        <div class="modal-field"><span class="fl">Leads</span><span class="fv">${prop.totalLeads||'0'} (${prop.totalQualified||'0'} qual)</span></div></div></div>
+      <div class="modal-section"><div class="modal-section-title">Listing Status</div><div class="modal-grid">
+        <div class="modal-field"><span class="fl">Status</span><span class="fv">${prop.listingStatus||'—'}</span></div>
+        <div class="modal-field"><span class="fl">MLS</span><span class="fv">${prop.listedMLS||'—'} ${prop.mls||''}</span></div>
+        <div class="modal-field"><span class="fl">Facebook</span><span class="fv">${prop.listedFB||'—'}</span></div>
+        <div class="modal-field"><span class="fl">Zillow Saves</span><span class="fv">${prop.zillowSaves||'—'}</span></div>
+        <div class="modal-field"><span class="fl">DD Status</span><span class="fv">${prop.ddStatus||'—'}</span></div></div></div>
+      <div class="modal-section"><div class="modal-section-title">Campaign History (${prop.history?.length||0})</div>${hist}</div>
+      <div class="modal-section"><div class="modal-section-title">Scheduled Campaigns</div>${buildSchedRows(pid)}</div>
+    </div><div class="modal-footer"><span id="modal-save-msg" style="font-size:12px;color:#059669;font-weight:600;margin-right:auto;opacity:0;transition:opacity .3s"></span><button class="modal-close-btn" style="background:var(--success);margin-right:8px" onclick="handleModalSave()">Save</button><button class="modal-close-btn" onclick="document.getElementById('modal').classList.remove('show')">Close</button></div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function buildSchedRows(pid){
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const rows=[];
+  for(const[ds,items]of Object.entries(state.schedule)){
+    items.forEach((it,idx)=>{
+      if(it.pid===pid){
+        const d=new Date(ds);
+        const dateLabel=mn[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+        const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+        const s=SHORT[it.obj]||it.obj;
+        const cls=CLS[it.obj]||'realtor';
+        const key=ds+'|'+pid+'|'+it.obj;
+        const ci=state.campInstructions[key]||{};
+        rows.push({ds,dateLabel,dow,s,cls,key,ci,sortDate:d});
+      }
+    });
+  }
+  rows.sort((a,b)=>a.sortDate-b.sortDate);
+  if(rows.length===0)return'<div class="no-sched">No campaigns scheduled yet. Drag campaigns from the sidebar to the calendar.</div>';
+  return rows.map(r=>`<div class="sched-row">
+    <div class="sched-row-header">
+      <span class="sched-row-date">${r.dow}, ${r.dateLabel}</span>
+      <span class="campaign-chip ${r.cls}" style="pointer-events:none;cursor:default">${r.s}</span>
+    </div>
+    <div class="sched-row-field">
+      <span class="sched-row-label">Outreach Tool</span>
+      <select onchange="saveCampField('${r.key}','tool',this.value)">
+        <option value=""${!r.ci.tool?' selected':''}>— Select —</option>
+        <option value="Texting"${r.ci.tool==='Texting'?' selected':''}>Texting</option>
+        <option value="Cold Calling"${r.ci.tool==='Cold Calling'?' selected':''}>Cold Calling</option>
+      </select>
+    </div>
+    <div class="sched-row-field" style="align-items:flex-start">
+      <span class="sched-row-label" style="margin-top:6px">Instructions</span>
+      <textarea placeholder="Target counties, radius, list size, special notes..." oninput="saveCampField('${r.key}','instructions',this.value)">${r.ci.instructions||''}</textarea>
+    </div>
+  </div>`).join('');
+}
+
+function saveCampField(key,field,value){
+  if(!state.campInstructions[key])state.campInstructions[key]={};
+  state.campInstructions[key][field]=value;
+}
+function handleModalSave(){
+  saveToFirestore();
+  const msg=document.getElementById('modal-save-msg');
+  msg.textContent='✓ Saved successfully';
+  msg.style.opacity='1';
+  setTimeout(()=>{msg.style.opacity='0';},2000);
+}
+
+// POD FILTER
+function togglePodFilter(pod){
+  if(state.podFilter===pod)state.podFilter=null; // toggle off
+  else state.podFilter=pod;
+  document.querySelectorAll('.pod-filter').forEach(el=>{
+    el.classList.toggle('active',el.dataset.pod===state.podFilter);
+  });
+  ['all','profit','dom','lastcamp','owned','ai','new'].forEach(t=>renderSB(t));
+}
+
+function getFilteredProps(){
+  if(!state.podFilter)return PROPS;
+  return PROPS.filter(p=>(p.pod||'').trim()===state.podFilter);
+}
+
+function initApp(){
+  for(const[ds,items]of Object.entries(LAST_WEEK_SCHEDULE)){
+    if(!state.schedule[ds])state.schedule[ds]=items.map(i=>({...i}));
+  }
+  state.currentMonth=new Date(TODAY.getFullYear(),TODAY.getMonth(),1);
+  ['all','profit','dom','lastcamp','owned','ai','new'].forEach(t=>renderSB(t));
+  renderResched();renderCal();updateStats();
+  document.querySelectorAll('.sidebar-tab').forEach(t=>{t.onclick=()=>{
+    state.activeTab=t.dataset.tab;
+    document.querySelectorAll('.sidebar-tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t.dataset.tab));
+    document.querySelectorAll('.sidebar-content').forEach(x=>x.classList.add('hidden'));
+    document.getElementById('sb-'+t.dataset.tab).classList.remove('hidden');
+  }});
+  document.getElementById('prev-month').onclick=()=>{state.currentMonth.setMonth(state.currentMonth.getMonth()-1);renderCal()};
+  document.getElementById('next-month').onclick=()=>{state.currentMonth.setMonth(state.currentMonth.getMonth()+1);renderCal()};
+  document.getElementById('modal').onclick=e=>{if(e.target===e.currentTarget)e.currentTarget.classList.remove('show')};
+}
+async function boot(){
+  const hasData=await loadFromFirestore();
+  if(hasData){
+    document.getElementById('upload-panel').classList.add('hidden');
+    document.getElementById('main-app').style.display='grid';
+    initApp();
+  }
+}
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body>
+</html>
