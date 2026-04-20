@@ -724,11 +724,12 @@ function processCSVData(pipelineRows,historyRows){
     let d;try{const p=rd.split('/');d=new Date(parseInt(p[2]),parseInt(p[0])-1,parseInt(p[1]));}catch(e){return;}
     if(d<cutoff)return;
     const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    if(status!=='Not Needed'&&status!==''&&d<today&&d>=cutoff){
+    const todayDs=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    if(status!=='Not Needed'&&status!==''&&ds<todayDs){
       if(!csvSchedule[ds])csvSchedule[ds]=[];
       csvSchedule[ds].push({pid:lid,obj});
     }
-    if(['Requested','Ready','Scheduled'].includes(status)&&d>=new Date(today.getFullYear(),today.getMonth(),today.getDate())){
+    if(['Requested','Ready','Scheduled'].includes(status)&&ds>=todayDs){
       if(!csvSchedule[ds])csvSchedule[ds]=[];
       csvSchedule[ds].push({pid:lid,obj});
     }
